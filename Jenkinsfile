@@ -34,31 +34,19 @@ pipeline {
             }
         }
         
-        stage('🔍 Analyse SonarQube') {
-            steps {
-                echo '🔍 Analyse SonarQube...'
-                
-                // ESSAYEZ CES OPTIONS :
-                
-                // OPTION 1 : Avec authentification basique (admin/admin)
-                sh '''
-                    mvn sonar:sonar \
-                      -Dsonar.projectKey=TP-Projet-2025-isra50 \
-                      -Dsonar.projectName="TP Projet 2025 - Spring Boot" \
-                      -Dsonar.host.url=http://localhost:9000 \
-                      -Dsonar.login=admin \
-                      -Dsonar.password=admin
-                '''
-                
-                // OU OPTION 2 : Avec token (si vous en avez créé un)
-                // sh '''
-                //     mvn sonar:sonar \
-                //       -Dsonar.projectKey=TP-Projet-2025-isra50 \
-                //       -Dsonar.host.url=http://localhost:9000 \
-                //       -Dsonar.login=votre_token_sonarqube
-                // '''
-            }
-        }
+       stage('🔍 Analyse SonarQube') {
+    steps {
+        echo '🔍 Analyse SonarQube...'
+        sh '''
+            mvn sonar:sonar \
+              -Dsonar.projectKey=TP-Projet-2025-isra50 \
+              -Dsonar.projectName="TP Projet 2025 - Spring Boot" \
+              -Dsonar.host.url=http://localhost:9000 \
+              -Dsonar.login=admin \
+              -Dsonar.password=admin
+        '''
+    }
+}
         
         stage('📦 Package JAR') {
             steps {
