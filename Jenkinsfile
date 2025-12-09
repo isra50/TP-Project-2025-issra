@@ -1,52 +1,64 @@
 pipeline {
     agent any
     
+    tools {
+        maven 'Maven-3' // Assurez-vous que ce tool est configuré dans Jenkins
+        jdk 'JDK-17'    // Assurez-vous que Java 17 est configuré
+    }
+    
     environment {
         SONAR_HOST_URL = 'http://localhost:9000'
         SONAR_PROJECT_KEY = 'TP-Projet-2025-isra50'
-        SONAR_PROJECT_NAME = 'TP Projet 2025 - Spring Boot'
-        // Ajoutez ces variables si vous avez un token SonarQube
-        // SONAR_LOGIN = 'admin'
-        // SONAR_PASSWORD = 'admin'
+        SONAR_PROJECT_NAME = 'TP-Projet-2025-isra50' // Nom simplifié pour éviter les problèmes de guillemets
+        
+        // Utilisez le credential 'jenkins-sonar' de votre table
+        SONAR_TOKEN = credentials('jenkins-sonar') // Assurez-vous que ce credential existe
     }
     
     stages {
         stage('🔁 Checkout Git') {
             steps {
                 echo '📥 Récupération du code...'
-                git branch: 'main',
-                    url: 'https://github.com/isra50/TP-Project-2025-issra.git',
-                    credentialsId: 'github-isra50'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/isra50/TP-Project-2025-issra.git',
+                        // Utilisez 'jenkins-git' ou 'github-ista' de votre table
+                        credentialsId: 'jenkins-git' // Vérifiez l'ID exact
+                    ]]
+                ])
             }
         }
         
-        stage('🧹 Nettoyage') {
+        stage('🧹 Nettoyage et Compilation') {
             steps {
-                echo '🧹 Nettoyage...'
-                sh 'mvn clean -q'
+                echo '🧹 Nettoyage et compilation...'
+                sh 'mvn clean compile -q'
             }
         }
         
-        stage('⚙️ Compilation') {
+        stage('🔍 Analyse SonarQube') {
             steps {
-                echo '⚙️ Compilation...'
-                sh 'mvn compile -q'
+                echo '🔍 Analyse SonarQube...'
+                withCredentials([string(credentialsId: 'jenkins-sonar', variable: 'SONAR_TOKEN')]) {
+                    sh """
+                        mvn sonar:sonar \
+                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                          -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
+                          -Dsonar.host.url=${SONAR_HOST_URL} \
+                          -Dsonar.login=${SONAR_TOKEN}
+                    """
+                }
             }
         }
         
-       stage('🔍 Analyse SonarQube') {
-    steps {
-        echo '🔍 Analyse SonarQube...'
-        sh '''
-            mvn sonar:sonar \
-              -Dsonar.projectKey=TP-Projet-2025-isra50 \
-              -Dsonar.projectName="TP Projet 2025 - Spring Boot" \
-              -Dsonar.host.url=http://localhost:9000 \
-              -Dsonar.login=admin \
-              -Dsonar.password=admin
-        '''
-    }
-}
+        stage('🧪 Tests') {
+            steps {
+                echo '🧪 Exécution des tests...'
+                sh 'mvn test -q'
+            }
+        }
         
         stage('📦 Package JAR') {
             steps {
@@ -63,6 +75,9 @@ pipeline {
         }
         failure {
             echo '❌ Pipeline échoué'
+        }
+        always {
+            echo '📊 Pipeline terminé'
         }
     }
 }
