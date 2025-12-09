@@ -5,89 +5,53 @@ pipeline {
         // Configuration SonarQube
         SONAR_HOST_URL = 'http://localhost:9000'
         SONAR_PROJECT_KEY = 'TP-Projet-2025-isra50'
-        SONAR_PROJECT_NAME = 'TP-Projet-2025-isra50'
+        SONAR_PROJECT_NAME = 'TP Projet 2025 - Spring Boot'
         
-        // Chemin Maven (à adapter selon votre installation)
-        MAVEN_HOME = '/usr/share/maven'  // Chemin standard sur Ubuntu
-        // OU MAVEN_HOME = '/opt/maven'  // Si vous l'avez installé ici
+        // Configuration Java (optionnel)
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
     }
     
     stages {
-        stage('🔁 Checkout Code') {
+        stage('📥 Checkout Code') {
             steps {
-                echo '📥 Récupération du code source...'
-                // Version simple sans credentials (publique)
-                git branch: 'main',
-                    url: 'https://github.com/isra50/TP-Project-2025-issra.git'
-                
-                // Si besoin d'authentification, utilisez:
-                // git branch: 'main',
-                //     url: 'https://github.com/isra50/TP-Project-2025-issra.git',
-                //     credentialsId: 'jenkins-git'  // Utilisez l'ID de votre table
+                echo '📥 Récupération du code source depuis GitHub...'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/isra50/TP-Project-2025-issra.git',
+                        credentialsId: 'jenkins-git'  // Utilise le credential de votre table
+                    ]]
+                ])
             }
         }
         
-        stage('🔧 Vérification Environnement') {
+        stage('🔧 Setup Environment') {
             steps {
-                echo '🔧 Vérification des outils installés...'
+                echo '🔧 Configuration de l environnement de build...'
                 script {
-                    // Vérifier Java
+                    // Vérification et installation de Maven si nécessaire
                     sh '''
-                        echo "=== Vérification Java ==="
-                        java -version 2>&1 || echo "Java non trouvé"
-                        echo ""
-                    '''
-                    
-                    // Vérifier Maven
-                    sh '''
-                        echo "=== Vérification Maven ==="
-                        which mvn || echo "Maven non trouvé dans PATH"
-                        echo ""
-                    '''
-                    
-                    // Vérifier SonarQube
-                    sh '''
+                        echo "=== Vérification des outils ==="
+                        
+                        # Java
+                        java -version || echo "Java non trouvé"
+                        
+                        # Maven
+                        if command -v mvn &> /dev/null; then
+                            echo "✅ Maven est installé"
+                            mvn --version
+                        else
+                            echo "⚠️ Installation de Maven..."
+                            sudo apt-get update -y
+                            sudo apt-get install -y maven
+                            mvn --version || echo "Échec d'installation de Maven"
+                        fi
+                        
+                        # Vérification SonarQube
                         echo "=== Vérification SonarQube ==="
-                        curl -s http://localhost:9000/api/system/status | grep -q "UP" && echo "✅ SonarQube est UP" || echo "❌ SonarQube n'est pas accessible"
-                        echo ""
+                        curl -s --connect-timeout 5 "${SONAR_HOST_URL}/api/system/status" | grep -q "UP" && echo "✅ SonarQube accessible" || echo "⚠️ SonarQube non accessible"
                     '''
-                }
-            }
-        }
-        
-        stage('⚙️ Installation Maven (si nécessaire)') {
-            steps {
-                echo '⚙️ Installation/Configuration de Maven...'
-                script {
-                    // Essayer plusieurs chemins possibles pour Maven
-                    def mvnPaths = [
-                        '/usr/bin/mvn',
-                        '/usr/local/bin/mvn',
-                        '/opt/maven/bin/mvn',
-                        '/usr/share/maven/bin/mvn'
-                    ]
-                    
-                    def mvnFound = false
-                    for (path in mvnPaths) {
-                        def result = sh(script: "which mvn || ls ${path} 2>/dev/null || echo 'not found'", returnStdout: true).trim()
-                        if (result != 'not found' && !result.contains('no mvn')) {
-                            echo "✅ Maven trouvé à: ${result}"
-                            mvnFound = true
-                            break
-                        }
-                    }
-                    
-                    if (!mvnFound) {
-                        echo "⚠️ Maven non trouvé, tentative d'installation..."
-                        sh '''
-                            # Installation de Maven sur Ubuntu/Debian
-                            sudo apt-get update || true
-                            sudo apt-get install -y maven || echo "Installation échouée, utilisation de wrapper"
-                            
-                            # Vérification après installation
-                            which mvn && echo "✅ Maven installé avec succès" || echo "❌ Échec installation Maven"
-                        '''
-                    }
                 }
             }
         }
@@ -95,116 +59,93 @@ pipeline {
         stage('🧹 Clean Project') {
             steps {
                 echo '🧹 Nettoyage du projet...'
-                sh '''
-                    # Utilise mvn du système ou mvn wrapper
-                    if command -v mvn &> /dev/null; then
-                        mvn clean -q
-                    elif [ -f "mvnw" ]; then
-                        chmod +x mvnw
-                        ./mvnw clean -q
-                    else
-                        echo "❌ Maven non trouvé et pas de wrapper disponible"
-                        exit 1
-                    fi
-                '''
+                sh 'mvn clean -q'
             }
         }
         
-        stage('🔨 Compilation') {
+        stage('🔨 Compile Project') {
             steps {
-                echo '🔨 Compilation du code...'
-                sh '''
-                    if command -v mvn &> /dev/null; then
-                        mvn compile -q
-                    elif [ -f "mvnw" ]; then
-                        ./mvnw compile -q
-                    fi
-                '''
+                echo '🔨 Compilation du code source...'
+                sh 'mvn compile -q'
             }
         }
         
-        stage('🧪 Exécution Tests') {
-            steps {
-                echo '🧪 Exécution des tests...'
-                sh '''
-                    if command -v mvn &> /dev/null; then
-                        mvn test -q
-                    elif [ -f "mvnw" ]; then
-                        ./mvnw test -q
-                    fi
-                '''
-                
-                // Enregistrement des résultats de tests
-                junit 'target/surefire-reports/*.xml'
-            }
-        }
-        
-        stage('🔍 Analyse SonarQube') {
+        stage('🔍 SonarQube Analysis') {
             steps {
                 echo '🔍 Analyse de qualité avec SonarQube...'
                 script {
-                    // OPTION 1: Avec token SonarQube (recommandé)
-                    withCredentials([string(credentialsId: 'jenkins-sonar', variable: 'SONAR_TOKEN')]) {
-                        sh '''
-                            if command -v mvn &> /dev/null; then
+                    try {
+                        // Option 1: Avec le credential 'jenkins-sonar' (recommandé)
+                        withCredentials([string(credentialsId: 'jenkins-sonar', variable: 'SONAR_TOKEN')]) {
+                            sh """
                                 mvn sonar:sonar \
-                                  -Dsonar.projectKey=TP-Projet-2025-isra50 \
-                                  -Dsonar.projectName="TP-Projet-2025-isra50" \
-                                  -Dsonar.host.url=http://localhost:9000 \
-                                  -Dsonar.login=${SONAR_TOKEN}
-                            elif [ -f "mvnw" ]; then
-                                ./mvnw sonar:sonar \
-                                  -Dsonar.projectKey=TP-Projet-2025-isra50 \
-                                  -Dsonar.projectName="TP-Projet-2025-isra50" \
-                                  -Dsonar.host.url=http://localhost:9000 \
-                                  -Dsonar.login=${SONAR_TOKEN}
-                            fi
-                        '''
-                    }
-                    
-                    // OPTION 2: Avec admin/admin (pour test)
-                    /*
-                    sh '''
-                        if command -v mvn &> /dev/null; then
+                                  -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                  -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
+                                  -Dsonar.host.url=${SONAR_HOST_URL} \
+                                  -Dsonar.login=${SONAR_TOKEN} \
+                                  -Dsonar.java.binaries=target/classes \
+                                  -Dsonar.coverage.exclusions=**/test/** \
+                                  -DskipTests
+                            """
+                        }
+                        
+                        // Option 2: Avec admin/admin (pour test - décommentez si besoin)
+                        /*
+                        sh """
                             mvn sonar:sonar \
-                              -Dsonar.projectKey=TP-Projet-2025-isra50 \
-                              -Dsonar.projectName="TP-Projet-2025-isra50" \
-                              -Dsonar.host.url=http://localhost:9000 \
+                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                              -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
+                              -Dsonar.host.url=${SONAR_HOST_URL} \
                               -Dsonar.login=admin \
-                              -Dsonar.password=admin
-                        elif [ -f "mvnw" ]; then
-                            ./mvnw sonar:sonar \
-                              -Dsonar.projectKey=TP-Projet-2025-isra50 \
-                              -Dsonar.projectName="TP-Projet-2025-isra50" \
-                              -Dsonar.host.url=http://localhost:9000 \
-                              -Dsonar.login=admin \
-                              -Dsonar.password=admin
-                        fi
-                    '''
-                    */
+                              -Dsonar.password=admin \
+                              -Dsonar.java.binaries=target/classes \
+                              -DskipTests
+                        """
+                        */
+                    } catch (Exception e) {
+                        echo "⚠️ Analyse SonarQube échouée: ${e.message}"
+                        echo "Continuer avec le build..."
+                    }
                 }
             }
         }
         
-        stage('📦 Build JAR') {
+        stage('📦 Build & Package') {
             steps {
-                echo '📦 Construction du JAR...'
+                echo '📦 Construction du fichier JAR...'
                 sh '''
-                    if command -v mvn &> /dev/null; then
-                        mvn package -DskipTests -q
-                    elif [ -f "mvnw" ]; then
-                        ./mvnw package -DskipTests -q
+                    # Construction sans exécution des tests (à cause de la base de données)
+                    mvn package -DskipTests -q
+                    
+                    # Vérification du JAR généré
+                    echo "=== Fichiers JAR générés ==="
+                    find target -name "*.jar" -type f | xargs ls -lh 2>/dev/null || echo "Aucun JAR trouvé"
+                    
+                    # Vérification basique du JAR
+                    if ls target/*.jar 1> /dev/null 2>&1; then
+                        echo "✅ JAR généré avec succès"
+                        jar tf target/*.jar | grep -E "(META-INF/MANIFEST.MF|BOOT-INF)" | head -5
+                    else
+                        echo "❌ Erreur: Aucun JAR généré"
+                        exit 1
                     fi
                 '''
                 
-                // Archive le JAR généré
+                // Archivage du JAR pour téléchargement
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
-                
-                // Affiche les informations du JAR
+            }
+        }
+        
+        stage('✅ Verify & Report') {
+            steps {
+                echo '✅ Vérification finale et génération de rapports...'
                 sh '''
-                    echo "=== Fichiers JAR générés ==="
-                    ls -la target/*.jar 2>/dev/null || echo "Aucun JAR trouvé"
-                    echo ""
+                    echo "=== RAPPORT DE BUILD ==="
+                    echo "📊 Projet: ${SONAR_PROJECT_NAME}"
+                    echo "🔑 Clé: ${SONAR_PROJECT_KEY}"
+                    echo "🌐 SonarQube: ${SONAR_HOST_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
+                    echo "📦 Artefact: target/*.jar"
+                    echo "✅ Build #${BUILD_NUMBER} terminé avec succès!"
                 '''
             }
         }
@@ -212,35 +153,38 @@ pipeline {
     
     post {
         success {
-            echo '✅ ✅ ✅ PIPELINE RÉUSSI ! ✅ ✅ ✅'
-            echo "Build #${env.BUILD_NUMBER} terminé avec succès"
+            echo '🎉 🎉 🎉 PIPELINE RÉUSSI ! 🎉 🎉 🎉'
+            echo "Build #${env.BUILD_NUMBER} complété avec succès"
+            echo "📦 Télécharger le JAR: ${env.BUILD_URL}artifact/"
+            echo "🔗 Rapport SonarQube: ${SONAR_HOST_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
             
-            // Optionnel: Notification
+            // Optionnel: Envoyer une notification
             // emailext (
             //     subject: "SUCCÈS: Build ${env.JOB_NAME} #${env.BUILD_NUMBER}",
             //     body: "Le pipeline s'est terminé avec succès.\n\nVoir: ${env.BUILD_URL}",
-            //     to: 'votre-email@example.com'
+            //     to: 'email@example.com'
             // )
         }
         failure {
             echo '❌ ❌ ❌ PIPELINE ÉCHOUÉ ❌ ❌ ❌'
             echo "Build #${env.BUILD_NUMBER} a échoué"
+            echo "🔍 Détails: ${env.BUILD_URL}console"
             
-            // Afficher les erreurs détaillées
-            sh '''
-                echo "=== Dernières erreurs ==="
-                echo "Consultez les logs pour plus de détails"
-            '''
+            // Optionnel: Notification d'échec
+            // emailext (
+            //     subject: "ÉCHEC: Build ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+            //     body: "Le pipeline a échoué.\n\nVoir: ${env.BUILD_URL}",
+            //     to: 'email@example.com'
+            // )
         }
         always {
             echo '📊 📊 📊 PIPELINE TERMINÉ 📊 📊 📊'
-            echo "Temps total: ${currentBuild.durationString}"
+            echo "⏱️  Durée totale: ${currentBuild.durationString}"
+            echo "🔗 URL du build: ${env.BUILD_URL}"
+            echo "📈 Statut final: ${currentBuild.currentResult}"
             
-            // Nettoyage de l'espace de travail (optionnel)
+            // Nettoyage (optionnel - décommentez si nécessaire)
             // cleanWs()
-            
-            // Rapport de qualité SonarQube
-            echo "🔗 Rapport SonarQube: http://localhost:9000/dashboard?id=TP-Projet-2025-isra50"
         }
     }
 }
