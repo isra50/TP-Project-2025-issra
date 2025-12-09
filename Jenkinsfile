@@ -1,10 +1,9 @@
 pipeline {
     agent any
     
-    tools {
-        maven "Maven-3.6.2"
-        jdk "JDK-17"
-    }
+    // OPTION 1 : Sans section tools (utilise Maven/Java système)
+    // OU
+    // OPTION 2 : Avec les bons noms d'outils configurés dans Jenkins
     
     stages {
         stage("Checkout Git") {
