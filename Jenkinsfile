@@ -1,10 +1,16 @@
 pipeline {
     agent any
     environment {
+        // Configuration Docker
+        DOCKER_REGISTRY = 'docker.io'
+        DOCKER_IMAGE = 'votredockerhub/tp-projet-2025'
+        DOCKER_TAG = "${BUILD_NUMBER}"
+        
         // Configuration SonarQube
         SONAR_HOST_URL = 'http://localhost:9000'
         SONAR_PROJECT_KEY = 'TP-Projet-2025-isra50'
         SONAR_PROJECT_NAME = 'TP Projet 2025 - Spring Boot'
+        
         // Configuration Java
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
         PATH = "${JAVA_HOME}/bin:${PATH}"
@@ -12,106 +18,85 @@ pipeline {
     stages {
         stage('📥 Checkout Code') {
             steps {
-                echo '📥 Récupération du code source depuis GitHub...'
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/isra50/TP-Project-2025-issra.git',
-                        credentialsId: 'jenkins-git'
-                    ]]
-                ])
+                checkout scm
             }
         }
-        stage('🔧 Setup Environment') {
+        
+        stage('🐳 Build Docker Image') {
             steps {
-                echo '🔧 Configuration de l’environnement de build...'
-                sh '''
-                    echo "=== Vérification Java ==="
-                    java -version
-                    echo "=== Vérification Maven ==="
-                    if command -v mvn &> /dev/null; then
-                        echo "✅ Maven est installé"
-                        mvn -version
-                    else
-                        echo "⚠️ Maven non trouvé"
-                        exit 1
-                    fi
-                    echo "=== Vérification SonarQube ==="
-                    curl -s --connect-timeout 5 "${SONAR_HOST_URL}/api/system/status" \
-                        | grep -q "UP" && echo "✅ SonarQube accessible" || echo "⚠️ SonarQube non accessible"
-                '''
+                script {
+                    echo '🐳 Construction de l’image Docker...'
+                    sh """
+                        docker build \
+                          --build-arg BUILD_DATE=\$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+                          --build-arg COMMIT_SHA=\$(git rev-parse HEAD) \
+                          -t ${DOCKER_IMAGE}:${DOCKER_TAG} \
+                          -t ${DOCKER_IMAGE}:latest \
+                          .
+                    """
+                }
             }
         }
-        stage('🧹🔨 Clean & Compile Project') {
-            steps {
-                echo '🧹🔨 Nettoyage et compilation du projet...'
-                sh 'mvn clean compile -q'
-            }
-        }
+        
         stage('🔍 SonarQube Analysis') {
             steps {
-                echo '🔍 Analyse de qualité avec SonarQube...'
+                withCredentials([string(credentialsId: 'jenkins-sonar', variable: 'SONAR_TOKEN')]) {
+                    sh """
+                        mvn sonar:sonar \
+                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                          -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
+                          -Dsonar.host.url=${SONAR_HOST_URL} \
+                          -Dsonar.login=${SONAR_TOKEN} \
+                          -DskipTests
+                    """
+                }
+            }
+        }
+        
+        stage('🧪 Test Image Locally') {
+            steps {
                 script {
-                    try {
-                        withCredentials([string(credentialsId: 'jenkins-sonar', variable: 'SONAR_TOKEN')]) {
-                            sh """
-                                mvn sonar:sonar \
-                                  -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                  -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
-                                  -Dsonar.host.url=${SONAR_HOST_URL} \
-                                  -Dsonar.login=${SONAR_TOKEN} \
-                                  -Dsonar.java.binaries=target/classes \
-                                  -Dsonar.coverage.exclusions=**/test/** \
-                                  -DskipTests
-                            """
-                        }
-                    } catch (Exception e) {
-                        echo "⚠️ Analyse SonarQube échouée : ${e.message}"
-                        echo "➡️ Le pipeline continue..."
+                    echo '🧪 Test de l’image Docker en local...'
+                    sh """
+                        docker run -d -p 8081:8080 --name tp-projet-test ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        sleep 15
+                        curl -f http://localhost:8081/actuator/health || exit 1
+                        docker stop tp-projet-test
+                        docker rm tp-projet-test
+                    """
+                }
+            }
+        }
+        
+        stage('📤 Push to Docker Registry') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    echo '📤 Pousser l’image vers Docker Registry...'
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker-hub-credentials',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )]) {
+                        sh """
+                            docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+                            docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                            docker push ${DOCKER_IMAGE}:latest
+                        """
                     }
                 }
             }
         }
-        stage('📦 Build & Package') {
-            steps {
-                echo '📦 Construction du fichier JAR...'
-                sh '''
-                    mvn package -DskipTests -q
-                    echo "=== JAR généré ==="
-                    ls -lh target/*.jar || (echo "❌ Aucun JAR généré" && exit 1)
-                '''
-                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
-            }
-        }
-        stage('✅ Verify & Report') {
-            steps {
-                echo '✅ Vérification finale et rapport...'
-                sh '''
-                    echo "=== RAPPORT FINAL ==="
-                    echo "📦 Projet : ${SONAR_PROJECT_NAME}"
-                    echo "🔑 Clé Sonar : ${SONAR_PROJECT_KEY}"
-                    echo "🌐 SonarQube : ${SONAR_HOST_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
-                    echo "📁 Artefact : target/*.jar"
-                    echo "✅ Build #${BUILD_NUMBER} terminé avec succès"
-                '''
-            }
-        }
     }
     post {
-        success {
-            echo '🎉 PIPELINE RÉUSSI 🎉'
-            echo "📦 Artefacts : ${BUILD_URL}artifact/"
-            echo "🔗 SonarQube : ${SONAR_HOST_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
-        }
-        failure {
-            echo '❌ PIPELINE ÉCHOUÉ'
-            echo "🔍 Logs : ${BUILD_URL}console"
-        }
         always {
-            echo '📊 PIPELINE TERMINÉ'
-            echo "⏱️ Durée : ${currentBuild.durationString}"
-            echo "📈 Statut : ${currentBuild.currentResult}"
+            sh 'docker system prune -f'
+            cleanWs()
+        }
+        success {
+            echo "✅ Image Docker disponible: ${DOCKER_IMAGE}:${DOCKER_TAG}"
         }
     }
 }
