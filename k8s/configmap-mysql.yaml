@@ -1,0 +1,134 @@
+# k8s/configmap-mysql.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tp-projet-config
+  namespace: tp-projet-2025
+data:
+  application.yml: |
+    spring:
+      application:
+        name: tp-projet-2025
+      
+      # Configuration MySQL
+      datasource:
+        url: jdbc:mysql://mysql-service.tp-projet-2025.svc.cluster.local:3306/tpfoyer?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&createDatabaseIfNotExist=true
+        username: tpuser
+        password: tppassword
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        
+        # Configuration du pool de connexions HikariCP (recommandé)
+        hikari:
+          connection-timeout: 30000
+          maximum-pool-size: 10
+          minimum-idle: 5
+          idle-timeout: 600000
+          max-lifetime: 1800000
+          connection-test-query: SELECT 1
+          pool-name: SpringBootHikariCP
+      
+      # Configuration JPA/Hibernate
+      jpa:
+        database-platform: org.hibernate.dialect.MySQL8Dialect
+        hibernate:
+          ddl-auto: update
+        show-sql: true
+        properties:
+          hibernate:
+            format_sql: true
+            jdbc:
+              batch_size: 20
+            order_inserts: true
+            order_updates: true
+            generate_statistics: false
+          javax:
+            persistence:
+              schema-generation:
+                database:
+                  action: update
+      
+      # Initialisation SQL (optionnel)
+      sql:
+        init:
+          mode: always
+          continue-on-error: true
+          schema-locations: classpath:schema.sql
+          data-locations: classpath:data.sql
+      
+      # Configuration Flyway (si vous l'utilisez)
+      # flyway:
+      #   enabled: true
+      #   baseline-on-migrate: true
+      #   locations: classpath:db/migration
+    
+    # Configuration du serveur
+    server:
+      port: 8080
+      servlet:
+        context-path: /tpProjet
+        encoding:
+          charset: UTF-8
+          enabled: true
+          force: true
+      compression:
+        enabled: true
+        mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+        min-response-size: 1024
+    
+    # Configuration Actuator (monitoring)
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,info,metrics,prometheus,env,beans
+          base-path: /actuator
+          path-mapping:
+            health: healthcheck
+      endpoint:
+        health:
+          show-details: always
+          show-components: always
+          probes:
+            enabled: true
+        metrics:
+          enabled: true
+        prometheus:
+          enabled: true
+      metrics:
+        export:
+          prometheus:
+            enabled: true
+        enable:
+          jvm: true
+          system: true
+          logback: true
+          tomcat: true
+    
+    # Logging
+    logging:
+      level:
+        root: INFO
+        org.springframework: INFO
+        org.hibernate: INFO
+        com.zaxxer.hikari: DEBUG
+        org.hibernate.SQL: DEBUG
+        org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+      pattern:
+        console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+        file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+      file:
+        name: /var/log/tp-projet/application.log
+        max-size: 10MB
+        max-history: 30
+    
+    # Configuration personnalisée
+    app:
+      name: TP Projet 2025
+      version: 1.0.0
+      api:
+        prefix: /api/v1
+        cors:
+          allowed-origins: "*"
+          allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+          allowed-headers: "*"
+          allow-credentials: true
