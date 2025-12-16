@@ -1,27 +1,48 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: tp-projet-service
-  namespace: tp-projet-2025
-  labels:
-    app: tp-projet
-    service: backend
-spec:
-  selector:
-    app: tp-projet
-    tier: backend
-  ports:
-  - name: http
-    port: 80
-    targetPort: 8080
-    protocol: TCP
-  - name: metrics
-    port: 8081
-    targetPort: 8081
-    protocol: TCP
-  type: LoadBalancer
-  # Pour un environnement local/development, utilisez NodePort:
-  # type: NodePort
-  # Pour AKS/EKS/GKE, utilisez LoadBalancer
-  sessionAffinity: None
-  externalTrafficPolicy: Cluster
+#!/bin/bash
+echo "🧪 TEST COMPLET DU SERVICE"
+echo "=========================="
+
+SERVICE_IP="192.168.49.2"
+SERVICE_NAME="tp-projet-service"
+NAMESPACE="tp-projet-2025"
+
+echo "1. 📊 État du service :"
+kubectl get svc $SERVICE_NAME -n $NAMESPACE -o wide
+
+echo -e "\n2. 🔗 Endpoints :"
+ENDPOINTS=$(kubectl get endpoints $SERVICE_NAME -n $NAMESPACE -o jsonpath='{.subsets[0].addresses[*].ip}')
+if [ ! -z "$ENDPOINTS" ]; then
+    echo "   ✅ Service a des endpoints : $ENDPOINTS"
+else
+    echo "   ❌ Service n'a pas d'endpoints"
+fi
+
+echo -e "\n3. 🌐 Test externe (NodePort) :"
+echo "   Test sur $SERVICE_IP:30080"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$SERVICE_IP:30080/ 2>/dev/null || echo "TIMEOUT")
+if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "302" ] || [ "$HTTP_CODE" == "401" ] || [ "$HTTP_CODE" == "404" ]; then
+    echo "   ✅ Service répond (HTTP $HTTP_CODE)"
+    echo "   Note: 404/401 signifie que l'application répond mais avec Spring Security"
+elif [ "$HTTP_CODE" == "TIMEOUT" ]; then
+    echo "   ❌ Service ne répond pas (timeout)"
+else
+    echo "   ⚠️  Service répond avec code $HTTP_CODE"
+fi
+
+echo -e "\n4. 🔍 Test interne (depuis le cluster) :"
+kubectl run --rm -i --tty test-curl --image=curlimages/curl --restart=Never -n $NAMESPACE -- \
+  sh -c "curl -s http://$SERVICE_NAME.$NAMESPACE.svc.cluster.local:8080/ || echo 'Test interne terminé'"
+
+echo -e "\n5. 📡 Test de charge :"
+echo "   Le service distribue le trafic sur :"
+kubectl get pods -n $NAMESPACE -l app=tp-projet -o wide | grep -v NAME
+
+echo -e "\n🎯 CONCLUSION DU SERVICE :"
+if [ ! -z "$ENDPOINTS" ] && [ "$HTTP_CODE" != "TIMEOUT" ]; then
+    echo "   ✅ SERVICE FONCTIONNEL"
+    echo "   - Route le trafic vers les pods"
+    echo "   - Répond aux requêtes"
+    echo "   - Problème: Spring Security bloque l'accès public"
+else
+    echo "   ❌ SERVICE DÉFAILLANT"
+fi
