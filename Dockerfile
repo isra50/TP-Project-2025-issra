@@ -44,7 +44,7 @@ RUN echo "📦 Construction du fichier JAR..." && \
     ls -lh target/*.jar
 
 # Stage 2: Runtime stage léger avec JRE seulement
-FROM openjdk:17-jre-slim
+FROM eclipse-temurin:17-jre
 
 # Métadonnées
 LABEL maintainer="isra50"
