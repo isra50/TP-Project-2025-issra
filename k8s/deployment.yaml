@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tp-projet-deployment
+  namespace: tp-projet-2025
+  labels:
+    app: tp-projet
+    version: v1.0
+    managed-by: jenkins
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  minReadySeconds: 30
+  selector:
+    matchLabels:
+      app: tp-projet
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: tp-projet
+        tier: backend
+        version: v1.0
+      annotations:
+        build.number: "${BUILD_NUMBER}"
+        commit.hash: "${GIT_COMMIT}"
+        built.by: "jenkins"
+    spec:
+      containers:
+      - name: tp-projet-app
+        image: votredockerhub/tp-projet-2025:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "production"
+        - name: JAVA_OPTS
+          value: "-Xms256m -Xmx512m"
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "health,info,metrics,prometheus"
+        - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK
+          value: "INFO"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /actuator/health/startup
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 30
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+      volumes:
+      - name: config-volume
+        configMap:
+          name: tp-projet-config
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 60
