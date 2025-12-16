@@ -1,3 +1,5 @@
+# 1. Créer un ConfigMap avec H2 (base de données en mémoire)
+cat > k8s/configmap-h2.yaml << 'EOF'
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -17,7 +19,7 @@ data:
         database-platform: org.hibernate.dialect.H2Dialect
         hibernate:
           ddl-auto: update
-        show-sql: false
+        show-sql: true
       h2:
         console:
           enabled: true
@@ -25,7 +27,7 @@ data:
     server:
       port: 8080
       servlet:
-        context-path: /
+        context-path: /tpProjet
     management:
       endpoints:
         web:
@@ -34,5 +36,13 @@ data:
       endpoint:
         health:
           show-details: always
-          probes:
-            enabled: true
+EOF
+
+# 2. Appliquer
+kubectl apply -f k8s/configmap-h2.yaml
+
+# 3. Redémarrer l'application
+kubectl rollout restart deployment tp-projet-deployment -n tp-projet-2025
+
+# 4. Vérifier
+kubectl get pods -n tp-projet-2025 --watch
