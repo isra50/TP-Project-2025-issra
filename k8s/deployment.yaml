@@ -88,3 +88,19 @@ spec:
           name: tp-projet-config
       restartPolicy: Always
       terminationGracePeriodSeconds: 60
+            volumes:
+      - name: config-volume
+        configMap:
+          name: tp-projet-config
+      - name: static-volume          # ← AJOUTE ÇA
+        configMap:
+          name: static-content
+
+      containers:
+      - name: tp-projet-app
+        # ... tout ton contenu existant ...
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+        - name: static-volume          # ← AJOUTE ÇA
+          mountPath: /static             # On monte le HTML à la racine du container
