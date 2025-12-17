@@ -22,16 +22,14 @@ data:
         hibernate:
           ddl-auto: update
         show-sql: true
+        database-platform: org.hibernate.dialect.MySQL8Dialect  # CORRIGÉ !
         properties:
           hibernate:
-            dialect: org.hibernate.dialect.MySQLDialect
-     
-      autoconfigure:
-        exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+            format_sql: true
      
       web:
         resources:
-           static-locations: file:/static/,classpath:/static/,classpath:/public/,classpath:/resources/,classpath:/META-INF/resources/
+          static-locations: file:/static/,classpath:/static/,classpath:/public/,classpath:/resources/,classpath:/META-INF/resources/
    
     server:
       port: 8080
@@ -46,6 +44,13 @@ data:
       endpoint:
         health:
           show-details: always
+          probes:
+            enabled: true
+   
+    logging:
+      level:
+        org.springframework: INFO
+        tn.esprit: DEBUG
    
     app:
       welcome-message: "TP Projet 2025 - Déploiement Kubernetes Réussi"
