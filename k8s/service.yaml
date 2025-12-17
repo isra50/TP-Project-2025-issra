@@ -6,11 +6,16 @@ metadata:
   labels:
     app: tp-projet
 spec:
-  type: LoadBalancer  # Change en NodePort si ton cluster (ex: minikube) ne donne pas d'IP externe
+  type: LoadBalancer
   selector:
     app: tp-projet
     tier: backend
   ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8080
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 8080
+  - name: actuator  # Optionnel : port dédié pour Actuator
+    protocol: TCP
+    port: 8081
+    targetPort: 8080
