@@ -31,7 +31,7 @@ data:
      
       web:
         resources:
-          static-locations: file:/static/,classpath:/static/,classpath:/public/,classpath:/resources/,classpath:/META-INF/resources/
+           static-locations: file:/static/,classpath:/static/,classpath:/public/,classpath:/resources/,classpath:/META-INF/resources/
    
     server:
       port: 8080
