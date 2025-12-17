@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
       - name: tp-projet-app
-        image: votredockerhub/tp-projet-2025:latest
+        image: isra50/tp-projet-2025:v1.0
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
