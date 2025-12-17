@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
       - name: tp-projet-app
-        image: isra50/tp-projet-2025:v1.0
+        image: isra50/tp-projet-2025:v1.0  # OU :latest selon votre choix
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -41,6 +41,8 @@ spec:
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: "production"
+        - name: SPRING_CONFIG_LOCATION
+          value: "file:/app/config/application.yml"  # IMPORTANT !
         - name: JAVA_OPTS
           value: "-Xms256m -Xmx512m"
         - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
@@ -82,25 +84,14 @@ spec:
         volumeMounts:
         - name: config-volume
           mountPath: /app/config
+        - name: static-volume
+          mountPath: /static
       volumes:
       - name: config-volume
         configMap:
           name: tp-projet-config
-      restartPolicy: Always
-      terminationGracePeriodSeconds: 60
-            volumes:
-      - name: config-volume
-        configMap:
-          name: tp-projet-config
-      - name: static-volume          # ← AJOUTE ÇA
+      - name: static-volume
         configMap:
           name: static-content
-
-      containers:
-      - name: tp-projet-app
-        # ... tout ton contenu existant ...
-        volumeMounts:
-        - name: config-volume
-          mountPath: /app/config
-        - name: static-volume          # ← AJOUTE ÇA
-          mountPath: /static             # On monte le HTML à la racine du container
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 60
