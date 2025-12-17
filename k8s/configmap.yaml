@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tp-projet-config
+  namespace: tp-projet-2025
+data:
+  application.yml: |
+    spring:
+      application:
+        name: tp-projet-2025
+      
+      # Configuration MySQL
+      datasource:
+        url: jdbc:mysql://mysql-service.tp-projet-2025.svc.cluster.local:3306/tpfoyer?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+        username: tpuser
+        password: tppassword
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        
+        # Configuration du pool de connexions HikariCP
+        hikari:
+          connection-timeout: 30000
+          maximum-pool-size: 10
+          minimum-idle: 5
+          idle-timeout: 600000
+          max-lifetime: 1800000
+          connection-test-query: SELECT 1
+      
+      # Configuration JPA/Hibernate pour MySQL
+      jpa:
+        database-platform: org.hibernate.dialect.MySQL8Dialect
+        hibernate:
+          ddl-auto: update
+        show-sql: true
+        properties:
+          hibernate.format_sql: true
+          hibernate.jdbc.batch_size: 20
+      
+      # Désactiver H2 Console car nous utilisons MySQL
+      h2:
+        console:
+          enabled: false
+    
+    # Configuration du serveur - IMPORTANT: garder / comme dans l'original
+    server:
+      port: 8080
+      servlet:
+        context-path: /
+      compression:
+        enabled: true
+    
+    # Configuration Actuator - IMPORTANT: corriger les chemins
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,info,metrics,prometheus
+          base-path: /actuator
+      endpoint:
+        health:
+          show-details: always
+          show-components: always
+          probes:
+            enabled: true
+    
+    # Logging
+    logging:
+      level:
+        root: INFO
+        org.springframework: INFO
+        org.hibernate.SQL: DEBUG

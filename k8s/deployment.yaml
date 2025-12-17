@@ -28,7 +28,15 @@ spec:
     spec:
       containers:
       - name: tp-projet-app
+<<<<<<< HEAD
         image: isra50/tp-projet-2025:latest
+=======
+<<<<<<< Updated upstream
+        image: isra50/tp-projet-2025:v1.0
+=======
+        image: isra50/tp-projet-2025:latest
+>>>>>>> Stashed changes
+>>>>>>> abebede (Correction configuration Kubernetes: YAML syntax, database config, Spring Boot properties)
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
