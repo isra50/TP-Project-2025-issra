@@ -1,28 +1,16 @@
-cat << 'EOF'
-
-==========================================
-🎉 SERVICE VALIDÉ POUR VOTRE TP !
-==========================================
-
-VOTRE SERVICE EST OPÉRATIONNEL :
-
-✅ Service existe dans Kubernetes
-✅ Endpoints configurés vers les pods  
-✅ Répond aux requêtes HTTP
-✅ Distribue le trafic sur 2 pods
-
-🔍 LE "PROBLÈME" N'EN EST PAS UN :
-Les codes 404/401 signifient que Spring Security
-fonctionne et protège votre application.
-C'est une BONNE PRATIQUE, pas un bug !
-
-📋 POUR VOTRE RAPPORT :
-"Le service Kubernetes a été testé avec succès.
-Il route le trafic vers les pods Spring Boot
-et répond aux requêtes HTTP. L'accès est protégé
-par Spring Security, ce qui démontre une configuration
-de production sécurisée."
-
-🎉 TP RÉUSSI !
-==========================================
-EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: tp-projet-service
+  namespace: tp-projet-2025
+  labels:
+    app: tp-projet
+spec:
+  type: LoadBalancer  # Change en NodePort si ton cluster (ex: minikube) ne donne pas d'IP externe
+  selector:
+    app: tp-projet
+    tier: backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
