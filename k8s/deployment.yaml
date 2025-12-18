@@ -25,14 +25,10 @@ spec:
         app: tp-projet
         tier: backend
         version: v1.0
-      annotations:
-        build.number: "${BUILD_NUMBER}"
-        commit.hash: "${GIT_COMMIT}"
-        built.by: "jenkins"
     spec:
       containers:
       - name: tp-projet-app
-        image: isra50/tp-projet-2025:v1.0  # OU :latest selon votre choix
+        image: isra50/tp-projet-2025:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -42,13 +38,9 @@ spec:
         - name: SPRING_PROFILES_ACTIVE
           value: "production"
         - name: SPRING_CONFIG_LOCATION
-          value: "file:/app/config/application.yml"  # IMPORTANT !
+          value: "file:/app/config/application.yml"
         - name: JAVA_OPTS
           value: "-Xms256m -Xmx512m"
-        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
-          value: "health,info,metrics,prometheus"
-        - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK
-          value: "INFO"
         resources:
           requests:
             memory: "256Mi"
@@ -60,7 +52,6 @@ spec:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-            scheme: HTTP
           initialDelaySeconds: 60
           periodSeconds: 10
           timeoutSeconds: 5
@@ -69,7 +60,6 @@ spec:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-            scheme: HTTP
           initialDelaySeconds: 30
           periodSeconds: 5
           timeoutSeconds: 3
@@ -86,6 +76,8 @@ spec:
           mountPath: /app/config
         - name: static-volume
           mountPath: /static
+        - name: static-volume
+          mountPath: /public  # AJOUTÉ : pour que Spring Boot trouve index.html à la racine
       volumes:
       - name: config-volume
         configMap:
@@ -94,4 +86,3 @@ spec:
         configMap:
           name: static-content
       restartPolicy: Always
-      terminationGracePeriodSeconds: 60
