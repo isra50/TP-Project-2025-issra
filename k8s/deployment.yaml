@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tp-projet-deployment
+  namespace: tp-projet-2025
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tp-projet
+template:
+  metadata:
+    labels:
+      app: tp-projet
+  spec:
+    containers:
+    - name: tp-projet-app
+      image: isra50/tp-projet-2025:latest
+      ports:
+      - containerPort: 8080
