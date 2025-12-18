@@ -8,7 +8,7 @@ data:
     spring:
       application:
         name: tp-projet-2025
-     
+    
       datasource:
         url: jdbc:mysql://mysql-service.tp-projet-2025.svc.cluster.local:3306/tpfoyer?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
         username: tpuser
@@ -17,25 +17,25 @@ data:
         hikari:
           connection-timeout: 30000
           maximum-pool-size: 10
-     
+    
       jpa:
         hibernate:
           ddl-auto: update
         show-sql: true
-        database-platform: org.hibernate.dialect.MySQL8Dialect  # CORRIGÉ !
+        database-platform: org.hibernate.dialect.MySQL8Dialect
         properties:
           hibernate:
             format_sql: true
-     
+    
       web:
         resources:
           static-locations: file:/static/,classpath:/static/,classpath:/public/,classpath:/resources/,classpath:/META-INF/resources/
-   
+  
     server:
       port: 8080
       servlet:
         context-path: /
-   
+  
     management:
       endpoints:
         web:
@@ -46,12 +46,12 @@ data:
           show-details: always
           probes:
             enabled: true
-   
+  
     logging:
       level:
         org.springframework: INFO
         tn.esprit: DEBUG
-   
+  
     app:
       welcome-message: "TP Projet 2025 - Déploiement Kubernetes Réussi"
 ---
@@ -80,24 +80,23 @@ data:
     </head>
     <body>
         <div class="container">
-            <h1>🎉 TP CD - Mission Accomplie !</h1>
+            <h1>TP CD - Mission Accomplie !</h1>
             <div class="success">
-                ✅ Déploiement Spring Boot + MySQL sur Kubernetes Réussi
+                Déploiement Spring Boot + MySQL sur Kubernetes Réussi
             </div>
             <div class="info-box">
-                <h3>📊 Configuration du Service :</h3>
+                <h3>Configuration du Service :</h3>
                 <p><strong>Type :</strong> LoadBalancer</p>
-                <p><strong>IP Publique :</strong> 10.100.201.218</p>
                 <p><strong>Ports :</strong> 80 (HTTP), 8081 (Monitoring)</p>
                 <p><strong>Base de données :</strong> MySQL 8.0 - tpfoyer</p>
                 <p><strong>Application :</strong> Spring Boot 3.5.6</p>
             </div>
-            <h3>🚀 Endpoints disponibles :</h3>
+            <h3>Endpoints disponibles :</h3>
             <div class="endpoints">
-                <a href="/actuator/health" class="endpoint">🏥 Health Check</a>
-                <a href="/actuator/info" class="endpoint">ℹ️ Info Application</a>
-                <a href="/actuator/metrics" class="endpoint">📈 Métriques</a>
-                <a href="/actuator/env" class="endpoint">⚙️ Variables d'env</a>
+                <a href="/actuator/health" class="endpoint">Health Check</a>
+                <a href="/actuator/info" class="endpoint">Info Application</a>
+                <a href="/actuator/metrics" class="endpoint">Métriques</a>
+                <a href="/actuator/env" class="endpoint">Variables d'env</a>
             </div>
             <p style="margin-top: 40px; font-style: italic;">
                 Ceci démontre un pipeline CI/CD complet : Docker → Kubernetes → Production
