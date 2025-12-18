@@ -8,13 +8,22 @@ spec:
   selector:
     matchLabels:
       app: tp-projet
-template:
-  metadata:
-    labels:
-      app: tp-projet
-  spec:
-    containers:
-    - name: tp-projet-app
-      image: isra50/tp-projet-2025:latest
-      ports:
-      - containerPort: 8080
+  template:
+    metadata:
+      labels:
+        app: tp-projet
+    spec:
+      containers:
+      - name: tp-projet-app
+        image: isra50/tp-projet-2025:latest
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: static-volume
+          mountPath: /static
+        - name: static-volume
+          mountPath: /public
+      volumes:
+      - name: static-volume
+        configMap:
+          name: static-content
