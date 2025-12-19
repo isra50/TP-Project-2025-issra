@@ -1,6 +1,5 @@
 # Stage 1: Build stage avec Maven et JDK 17 (identique à votre Jenkins)
 FROM maven:3.9-eclipse-temurin-17 AS builder
-=======
 FROM maven:3.9.9-amazoncorretto-17-alpine AS builder
 
 # Métadonnées
